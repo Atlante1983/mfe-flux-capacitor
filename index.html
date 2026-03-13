@@ -395,6 +395,7 @@ function drawEnergy(time){
 const world = document.getElementById('world');
 const svgEl = document.getElementById('tubes');
 const tip = document.getElementById('tip');
+const floaters = [];
 
 function mkSVGLine(x1,y1,x2,y2,color,cls){
     const l=document.createElementNS('http://www.w3.org/2000/svg','line');
@@ -425,6 +426,7 @@ branches.forEach(br=>{
     hub.style.animationDelay='.4s';
     hub.innerHTML=`<div class="hub-ring"><img src="${br.img}"></div>`;
     world.appendChild(hub);
+    floaters.push({el:hub, ox:bp.x, oy:bp.y, px:Math.random()*Math.PI*2, py:Math.random()*Math.PI*2, sx:.0004+Math.random()*.0003, sy:.0003+Math.random()*.0003, ax:3+Math.random()*2, ay:2.5+Math.random()*2});
 
     const n=br.kids.length;
     const arc=Math.min(150,n*10);
@@ -460,9 +462,22 @@ branches.forEach(br=>{
         leaf.addEventListener('mouseleave',()=>tip.classList.remove('visible'));
 
         world.appendChild(leaf);
+        floaters.push({el:leaf, ox:lp.x, oy:lp.y, px:Math.random()*Math.PI*2, py:Math.random()*Math.PI*2, sx:.0005+Math.random()*.0005, sy:.0004+Math.random()*.0005, ax:4+Math.random()*3, ay:3+Math.random()*3});
         leafDelay++;
     });
 });
+
+// ════════════════════════════════════════════════════
+//  ORGANIC FLOATING
+// ════════════════════════════════════════════════════
+function animateFloat(t){
+    floaters.forEach(f=>{
+        const dx = Math.sin(t*f.sx + f.px) * f.ax;
+        const dy = Math.cos(t*f.sy + f.py) * f.ay;
+        f.el.style.left = (f.ox + dx) + 'px';
+        f.el.style.top  = (f.oy + dy) + 'px';
+    });
+}
 
 // ════════════════════════════════════════════════════
 //  ANIMATION LOOP
@@ -470,6 +485,7 @@ branches.forEach(br=>{
 function loop(t){
     drawStars(t);
     drawEnergy(t);
+    animateFloat(t);
     requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
