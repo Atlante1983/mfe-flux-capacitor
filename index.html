@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MFE — Flux Capacitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        html,body{width:100%;height:100%;overflow:hidden;background:#06060e;font-family:'Outfit',sans-serif}
+
+        /* ── Animated gradient bg ──────────────── */
+        body::before{
+            content:'';position:fixed;inset:0;z-index:0;
+            background:
+                radial-gradient(ellipse 80% 60% at 50% 50%, rgba(10,25,47,0.9) 0%, transparent 70%),
+                radial-gradient(circle at 20% 80%, rgba(192,57,43,0.06) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(22,160,133,0.06) 0%, transparent 40%),
+                radial-gradient(circle at 50% 10%, rgba(52,73,94,0.08) 0%, transparent 40%),
+                #06060e;
+        }
+
+        /* ── Grid overlay ──────────────────────── */
+        body::after{
+            content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+            background-image:
+                linear-gradient(rgba(0,180,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,180,255,0.03) 1px, transparent 1px);
+            background-size:60px 60px;
+        }
+
+        /* ── Canvas layers ─────────────────────── */
+        #bgCanvas{position:fixed;inset:0;z-index:1;pointer-events:none}
+        #energyCanvas{position:fixed;inset:0;z-index:2;pointer-events:none}
+
+        /* ── World ─────────────────────────────── */
+        #diagram{position:relative;width:100vw;height:100vh;z-index:3;overflow:hidden;cursor:grab}
+        #diagram.grabbing{cursor:grabbing}
+        #world{position:absolute;width:100%;height:100%;transform-origin:center center;transition:transform .25s cubic-bezier(.4,0,.2,1)}
+
+        /* ── SVG tubes ─────────────────────────── */
+        #tubes{position:absolute;inset:0;z-index:1;pointer-events:none}
+        .tube{fill:none;stroke-width:4;stroke-linecap:round;opacity:.25}
+        .tube-glow{fill:none;stroke-width:12;stroke-linecap:round;opacity:.08;filter:blur(6px)}
+
+        /* ── Center core ───────────────────────── */
+        .core{
+            position:absolute;z-index:20;transform:translate(-50%,-50%);
+            display:flex;align-items:center;justify-content:center;
+        }
+        .core-outer{
+            width:190px;height:190px;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            background:radial-gradient(circle,rgba(0,180,255,0.08) 0%,rgba(6,6,14,0.95) 70%);
+            border:2px solid rgba(0,180,255,0.35);
+            box-shadow:0 0 60px rgba(0,180,255,0.15),0 0 120px rgba(0,180,255,0.05),inset 0 0 60px rgba(0,180,255,0.05);
+            animation:corePulse 4s ease-in-out infinite;
+            position:relative;
+        }
+        .core-outer::before{
+            content:'';position:absolute;inset:-8px;border-radius:50%;
+            border:1px solid rgba(0,180,255,0.1);
+            animation:coreRing 6s linear infinite;
+        }
+        .core-outer::after{
+            content:'';position:absolute;inset:-18px;border-radius:50%;
+            border:1px dashed rgba(0,180,255,0.06);
+            animation:coreRing 12s linear infinite reverse;
+        }
+        @keyframes corePulse{
+            0%,100%{box-shadow:0 0 60px rgba(0,180,255,.15),0 0 120px rgba(0,180,255,.05),inset 0 0 60px rgba(0,180,255,.05);border-color:rgba(0,180,255,.35)}
+            50%{box-shadow:0 0 80px rgba(0,180,255,.3),0 0 160px rgba(0,180,255,.1),inset 0 0 80px rgba(0,180,255,.1);border-color:rgba(0,180,255,.6)}
+        }
+        @keyframes coreRing{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+        .core-inner{
+            width:140px;height:140px;border-radius:50%;
+            background:rgba(255,255,255,0.97);
+            display:flex;align-items:center;justify-content:center;
+            box-shadow:0 4px 30px rgba(0,0,0,.15);
+        }
+        .core-inner img{width:105px;height:auto}
+
+        /* ── Hub nodes ─────────────────────────── */
+        .hub{
+            position:absolute;z-index:15;transform:translate(-50%,-50%);
+            display:flex;align-items:center;justify-content:center;
+            opacity:0;animation:nodeEnter .8s ease forwards;
+        }
+        .hub-ring{
+            width:115px;height:115px;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            background:rgba(255,255,255,0.95);
+            border:2.5px solid;
+            box-shadow:0 4px 25px rgba(0,0,0,.1);
+            transition:transform .3s ease,box-shadow .3s ease;
+            position:relative;
+        }
+        .hub:hover .hub-ring{transform:scale(1.08);box-shadow:0 8px 40px rgba(0,0,0,.2)}
+        .hub-ring::before{
+            content:'';position:absolute;inset:-6px;border-radius:50%;
+            border:1px solid;opacity:.2;
+            animation:coreRing 8s linear infinite;
+        }
+        .hub-ring img{width:78px;height:auto}
+
+        /* ── Leaf nodes ────────────────────────── */
+        .leaf{
+            position:absolute;z-index:10;transform:translate(-50%,-50%);
+            display:flex;align-items:center;justify-content:center;
+            opacity:0;
+            transition:transform .3s cubic-bezier(.4,0,.2,1);
+        }
+        .leaf:hover{transform:translate(-50%,-50%) scale(1.35)!important;z-index:25}
+
+        .leaf-orb{
+            width:62px;height:62px;border-radius:50%;
+            background:rgba(255,255,255,0.93);
+            border:1.5px solid rgba(255,255,255,0.6);
+            display:flex;align-items:center;justify-content:center;
+            box-shadow:0 2px 15px rgba(0,0,0,.08);
+            backdrop-filter:blur(10px);
+            -webkit-backdrop-filter:blur(10px);
+            transition:all .3s ease;
+            overflow:hidden;
+        }
+        .leaf:hover .leaf-orb{
+            box-shadow:0 4px 30px rgba(0,0,0,.15);
+            border-color:rgba(255,255,255,0.9);
+        }
+        .leaf-orb img{width:44px;height:44px;object-fit:contain}
+
+        /* ── Branch colors ─────────────────────── */
+        .c-es .hub-ring{border-color:#c0392b}
+        .c-es .hub-ring::before{border-color:#c0392b}
+        .c-es .leaf-orb{border-color:rgba(192,57,43,.2)}
+        .c-es .leaf:hover .leaf-orb{border-color:#c0392b;box-shadow:0 4px 25px rgba(192,57,43,.2)}
+
+        .c-it .hub-ring{border-color:#16a085}
+        .c-it .hub-ring::before{border-color:#16a085}
+        .c-it .leaf-orb{border-color:rgba(22,160,133,.2)}
+        .c-it .leaf:hover .leaf-orb{border-color:#16a085;box-shadow:0 4px 25px rgba(22,160,133,.2)}
+
+        .c-de .hub-ring{border-color:#34495e}
+        .c-de .hub-ring::before{border-color:#34495e}
+        .c-de .leaf-orb{border-color:rgba(52,73,94,.2)}
+        .c-de .leaf:hover .leaf-orb{border-color:#34495e;box-shadow:0 4px 25px rgba(52,73,94,.2)}
+
+        /* ── Entrance animation ────────────────── */
+        @keyframes nodeEnter{
+            0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}
+            60%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}
+            100%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+        }
+        @keyframes leafEnter{
+            0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}
+            70%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}
+            100%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+        }
+
+        /* ── Title ─────────────────────────────── */
+        .title{
+            position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:100;
+            text-align:center;pointer-events:none;
+            opacity:0;animation:fadeIn 1.5s ease .5s forwards;
+        }
+        .title h1{
+            font-family:'Space Mono',monospace;font-size:14px;font-weight:700;
+            letter-spacing:8px;text-transform:uppercase;
+            color:rgba(0,180,255,0.7);
+        }
+        .title p{
+            font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:3px;margin-top:3px;
+            font-family:'Space Mono',monospace;
+        }
+        @keyframes fadeIn{0%{opacity:0;transform:translateX(-50%) translateY(-10px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+        /* ── Legend ─────────────────────────────── */
+        .legend{
+            position:fixed;bottom:20px;left:20px;z-index:100;
+            display:flex;flex-direction:column;gap:6px;
+            padding:12px 16px;border-radius:12px;
+            background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);
+            backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+            opacity:0;animation:fadeIn 1.5s ease 1.5s forwards;
+        }
+        .legend-item{display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(255,255,255,0.5);font-weight:500}
+        .legend-dot{width:8px;height:8px;border-radius:50%}
+
+        /* ── Controls ──────────────────────────── */
+        .controls{
+            position:fixed;bottom:20px;right:20px;z-index:100;
+            display:flex;gap:6px;
+            opacity:0;animation:fadeIn 1.5s ease 1.5s forwards;
+        }
+        .ctrl{
+            width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);
+            background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);font-size:16px;
+            cursor:pointer;display:flex;align-items:center;justify-content:center;
+            backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+            transition:all .2s;
+        }
+        .ctrl:hover{background:rgba(0,180,255,0.15);border-color:rgba(0,180,255,0.4);color:#fff}
+
+        /* ── Tooltip ───────────────────────────── */
+        .tooltip{
+            position:fixed;z-index:200;pointer-events:none;
+            padding:6px 14px;border-radius:8px;
+            background:rgba(0,0,0,0.85);color:#fff;font-size:12px;font-weight:600;
+            letter-spacing:.5px;white-space:nowrap;
+            backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+            border:1px solid rgba(255,255,255,0.1);
+            opacity:0;transition:opacity .2s;
+            transform:translate(-50%,-120%);
+        }
+        .tooltip.visible{opacity:1}
+    </style>
+</head>
+<body>
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="energyCanvas"></canvas>
+
+    <div class="title">
+        <h1>MFE — MediaForEurope</h1>
+        <p>Flux Capacitor · Tech Connect 2026</p>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#c0392b"></div>Mediaset España</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#16a085"></div>Mediaset Italia</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#7f8c8d"></div>ProSiebenSat.1</div>
+    </div>
+
+    <div class="controls">
+        <button class="ctrl" id="zi">+</button>
+        <button class="ctrl" id="zo">−</button>
+        <button class="ctrl" id="rv">⟲</button>
+    </div>
+
+    <div class="tooltip" id="tip"></div>
+
+    <div id="diagram">
+        <div id="world">
+            <svg id="tubes"></svg>
+        </div>
+    </div>
+
+<script>
+// ════════════════════════════════════════════════════
+//  DATA
+// ════════════════════════════════════════════════════
+const B = '.';
+const branches = [
+    {
+        id:'es', css:'c-es', color:'#c0392b', colorRGB:[192,57,43], angle:210,
+        img:`${B}/MFE/Mediaset España - MFE.png`,
+        kids:[
+            {n:'Telecinco',img:`${B}/MEDIASET ESPAÑA/Telecinco - Mediaset España.png`},
+            {n:'Cuatro',img:`${B}/MEDIASET ESPAÑA/Cuatro - Mediaset España.png`},
+            {n:'FDF',img:`${B}/MEDIASET ESPAÑA/FDF (Factoría de Ficción) - Mediaset España.png`},
+            {n:'Divinity',img:`${B}/MEDIASET ESPAÑA/Divinity - Mediaset España.png`},
+            {n:'Energy',img:`${B}/MEDIASET ESPAÑA/Energy - Mediaset España.png`},
+            {n:'Be Mad',img:`${B}/MEDIASET ESPAÑA/Be Mad - Mediaset España.png`},
+            {n:'Boing',img:`${B}/MEDIASET ESPAÑA/Boing - Mediaset España.png`},
+            {n:'Mtmad',img:`${B}/MEDIASET ESPAÑA/Mtmad - Mediaset España.png`},
+            {n:'ElDesmarque',img:`${B}/MEDIASET ESPAÑA/ElDesmarque - Mediaset España.png`},
+            {n:'Mediaset Infinity',img:`${B}/MEDIASET ESPAÑA/Mediaset Infinity - Mediaset España.png`},
+            {n:'Publiespaña',img:`${B}/MEDIASET ESPAÑA/Publiespaña - Mediaset España.png`},
+            {n:'Atlas',img:`${B}/MEDIASET ESPAÑA/Atlas - Mediaset España.png`},
+            {n:'Mediterráneo Mediaset',img:`${B}/MEDIASET ESPAÑA/Mediterráneo Mediaset - Mediaset España.png`},
+            {n:'Telecinco Cinema',img:`${B}/MEDIASET ESPAÑA/Telecinco Cinema - Mediaset España.png`},
+            {n:'Uppers',img:`${B}/MEDIASET ESPAÑA/Uppers - Mediaset España.png`},
+            {n:'Be a Lion',img:`${B}/MEDIASET ESPAÑA/Be a Lion - Mediaset España.png`},
+            {n:'12 Meses 12 Causas',img:`${B}/MEDIASET ESPAÑA/12 Meses 12 Causas - Mediaset España.png`},
+        ]
+    },
+    {
+        id:'de', css:'c-de', color:'#34495e', colorRGB:[52,73,94], angle:90,
+        img:`${B}/MFE/ProSiebenSat.1 - MFE.png`,
+        kids:[
+            {n:'ProSieben',img:`${B}/PROSIEBENSAT.1 /ProSieben - ProSiebenSat.1.png`},
+            {n:'SAT.1',img:`${B}/PROSIEBENSAT.1 /SAT.1 - ProSiebenSat.1.png`},
+            {n:'Kabel Eins',img:`${B}/PROSIEBENSAT.1 /Kabel Eins - ProSiebenSat.1.png`},
+            {n:'Sixx',img:`${B}/PROSIEBENSAT.1 /Sixx - ProSiebenSat.1.png`},
+            {n:'SAT.1 Gold',img:`${B}/PROSIEBENSAT.1 /SAT.1 Gold - ProSiebenSat.1.png`},
+            {n:'ProSieben MAXX',img:`${B}/PROSIEBENSAT.1 /ProSieben MAXX - ProSiebenSat.1.png`},
+            {n:'Kabel Eins Doku',img:`${B}/PROSIEBENSAT.1 /Kabel Eins Doku - ProSiebenSat.1.png`},
+            {n:'Joyn',img:`${B}/PROSIEBENSAT.1 /Joyn - ProSiebenSat.1.png`},
+            {n:'Studio71',img:`${B}/PROSIEBENSAT.1 /Studio71 - ProSiebenSat.1.png`},
+            {n:'Seven.One Entertainment',img:`${B}/PROSIEBENSAT.1 /Seven.One Entertainment Group - ProSiebenSat.1.png`},
+            {n:'Seven.One Media',img:`${B}/PROSIEBENSAT.1 /Seven.One Media - ProSiebenSat.1.png`},
+            {n:'Verivox',img:`${B}/PROSIEBENSAT.1 /Verivox - ProSiebenSat.1.png`},
+            {n:'Flaconi',img:`${B}/PROSIEBENSAT.1 /Flaconi - ProSiebenSat.1.png`},
+        ]
+    },
+    {
+        id:'it', css:'c-it', color:'#16a085', colorRGB:[22,160,133], angle:330,
+        img:`${B}/MFE/Mediaset Italia - MFE.png`,
+        kids:[
+            {n:'Canale 5',img:`${B}/MEDIASET ITALIA/Canale 5 - Mediaset Italia.png`},
+            {n:'Italia 1',img:`${B}/MEDIASET ITALIA/Italia 1 - Mediaset Italia.png`},
+            {n:'Rete 4',img:`${B}/MEDIASET ITALIA/Rete 4 - Mediaset Italia.png`},
+            {n:'20 Mediaset',img:`${B}/MEDIASET ITALIA/20 Mediaset - Mediaset Italia.png`},
+            {n:'Iris',img:`${B}/MEDIASET ITALIA/Iris - Mediaset Italia.png`},
+            {n:'La5',img:`${B}/MEDIASET ITALIA/La5 - Mediaset Italia.png`},
+            {n:'Cine34',img:`${B}/MEDIASET ITALIA/Cine34 - Mediaset Italia.png`},
+            {n:'Focus',img:`${B}/MEDIASET ITALIA/Focus - Mediaset Italia.png`},
+            {n:'Top Crime',img:`${B}/MEDIASET ITALIA/Top Crime - Mediaset Italia.png`},
+            {n:'Mediaset Extra',img:`${B}/MEDIASET ITALIA/Mediaset Extra - Mediaset Italia.png`},
+            {n:'Boing',img:`${B}/MEDIASET ITALIA/Boing - Mediaset Italia.png`},
+            {n:'Cartoonito',img:`${B}/MEDIASET ITALIA/Cartoonito - Mediaset Italia.png`},
+            {n:'TGCom24',img:`${B}/MEDIASET ITALIA/TGCom24 - Mediaset Italia.png`},
+            {n:'Mediaset Infinity',img:`${B}/MEDIASET ITALIA/Mediaset Infinity - Mediaset Italia.png`},
+            {n:'RadioMediaset',img:`${B}/MEDIASET ITALIA/RadioMediaset - Mediaset Italia.png`},
+            {n:'Medusa Film',img:`${B}/MEDIASET ITALIA/Medusa Film - Mediaset Italia.png`},
+            {n:'Taodue',img:`${B}/MEDIASET ITALIA/Taodue - Mediaset Italia.png`},
+        ]
+    }
+];
+
+// ════════════════════════════════════════════════════
+//  LAYOUT
+// ════════════════════════════════════════════════════
+const W = window.innerWidth, H = window.innerHeight;
+const CX = W/2, CY = H*0.50;
+const BD = Math.min(W,H)*0.19;
+const LR = BD * 1.0;
+
+const rad = d => d*Math.PI/180;
+const pos = (cx,cy,a,d) => ({x:cx+Math.cos(rad(a))*d, y:cy-Math.sin(rad(a))*d});
+
+// ════════════════════════════════════════════════════
+//  BACKGROUND STARS
+// ════════════════════════════════════════════════════
+const bgC = document.getElementById('bgCanvas');
+const bgX = bgC.getContext('2d');
+bgC.width=W; bgC.height=H;
+
+const stars=[];
+for(let i=0;i<120;i++) stars.push({
+    x:Math.random()*W, y:Math.random()*H,
+    r:Math.random()*1.2+.3,
+    a:Math.random()*.3+.05,
+    s:Math.random()*.003+.001,
+    p:Math.random()*Math.PI*2
+});
+
+function drawStars(t){
+    bgX.clearRect(0,0,W,H);
+    stars.forEach(s=>{
+        const alpha = s.a + Math.sin(t*s.s + s.p)*.15;
+        bgX.beginPath();
+        bgX.arc(s.x,s.y,s.r,0,Math.PI*2);
+        bgX.fillStyle=`rgba(180,210,255,${Math.max(0,alpha)})`;
+        bgX.fill();
+    });
+}
+
+// ════════════════════════════════════════════════════
+//  ENERGY PARTICLES
+// ════════════════════════════════════════════════════
+const eC = document.getElementById('energyCanvas');
+const eX = eC.getContext('2d');
+eC.width=W; eC.height=H;
+
+const tubeSegments = []; // {x1,y1,x2,y2,color,colorRGB}
+const energyParticles = [];
+
+function spawnEnergy(){
+    tubeSegments.forEach(seg=>{
+        if(Math.random()<0.04){
+            energyParticles.push({
+                t:0, speed:.003+Math.random()*.004,
+                seg, size:Math.random()*2.5+1,
+                trail:[]
+            });
+        }
+    });
+}
+
+function drawEnergy(time){
+    eX.clearRect(0,0,W,H);
+    spawnEnergy();
+
+    for(let i=energyParticles.length-1;i>=0;i--){
+        const p=energyParticles[i];
+        p.t+=p.speed;
+        if(p.t>1){energyParticles.splice(i,1);continue}
+
+        const s=p.seg;
+        const x=s.x1+(s.x2-s.x1)*p.t;
+        const y=s.y1+(s.y2-s.y1)*p.t;
+
+        p.trail.push({x,y});
+        if(p.trail.length>12) p.trail.shift();
+
+        // Trail
+        for(let j=0;j<p.trail.length;j++){
+            const alpha=(j/p.trail.length)*0.4;
+            const r=p.size*(j/p.trail.length);
+            eX.beginPath();
+            eX.arc(p.trail[j].x, p.trail[j].y, r, 0, Math.PI*2);
+            eX.fillStyle=`rgba(${s.colorRGB[0]},${s.colorRGB[1]},${s.colorRGB[2]},${alpha})`;
+            eX.fill();
+        }
+
+        // Head glow
+        eX.beginPath();
+        eX.arc(x,y,p.size*1.5,0,Math.PI*2);
+        eX.fillStyle=`rgba(255,255,255,0.7)`;
+        eX.fill();
+
+        eX.beginPath();
+        eX.arc(x,y,p.size*3,0,Math.PI*2);
+        eX.fillStyle=`rgba(${s.colorRGB[0]},${s.colorRGB[1]},${s.colorRGB[2]},0.15)`;
+        eX.fill();
+    }
+
+    // Central core glow pulse
+    const pulse = Math.sin(time*0.002)*0.3+0.7;
+    const grad = eX.createRadialGradient(CX,CY,20,CX,CY,100*pulse);
+    grad.addColorStop(0,`rgba(0,180,255,${0.06*pulse})`);
+    grad.addColorStop(1,'rgba(0,180,255,0)');
+    eX.fillStyle=grad;
+    eX.fillRect(CX-120,CY-120,240,240);
+}
+
+// ════════════════════════════════════════════════════
+//  BUILD DOM
+// ════════════════════════════════════════════════════
+const world = document.getElementById('world');
+const svgEl = document.getElementById('tubes');
+const tip = document.getElementById('tip');
+
+function mkSVGLine(x1,y1,x2,y2,color,cls){
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',x1);l.setAttribute('y1',y1);
+    l.setAttribute('x2',x2);l.setAttribute('y2',y2);
+    l.setAttribute('stroke',color);l.setAttribute('class',cls);
+    svgEl.appendChild(l);
+}
+
+// Core
+const coreEl=document.createElement('div');
+coreEl.className='core';
+coreEl.style.left=CX+'px';coreEl.style.top=CY+'px';
+coreEl.innerHTML=`<div class="core-outer"><div class="core-inner"><img src="${B}/MFE/MediaForEurope (MFE) - MFE.png" alt="MFE"></div></div>`;
+world.appendChild(coreEl);
+
+// Branches
+let leafDelay=0;
+branches.forEach(br=>{
+    const bp=pos(CX,CY,br.angle,BD);
+    mkSVGLine(CX,CY,bp.x,bp.y,br.color,'tube');
+    mkSVGLine(CX,CY,bp.x,bp.y,br.color,'tube-glow');
+    tubeSegments.push({x1:CX,y1:CY,x2:bp.x,y2:bp.y,color:br.color,colorRGB:br.colorRGB});
+
+    const hub=document.createElement('div');
+    hub.className='hub '+br.css;
+    hub.style.left=bp.x+'px';hub.style.top=bp.y+'px';
+    hub.style.animationDelay='.4s';
+    hub.innerHTML=`<div class="hub-ring"><img src="${br.img}"></div>`;
+    world.appendChild(hub);
+
+    const n=br.kids.length;
+    const arc=Math.min(150,n*10);
+    const sa=br.angle-arc/2;
+    const step=arc/(n-1||1);
+
+    br.kids.forEach((k,i)=>{
+        const ca=sa+i*step;
+        const r=(i%3===0)?LR*1.4:(i%3===1)?LR*1.1:LR*.85;
+        const lp=pos(bp.x,bp.y,ca,r);
+
+        mkSVGLine(bp.x,bp.y,lp.x,lp.y,br.color,'tube');
+        mkSVGLine(bp.x,bp.y,lp.x,lp.y,br.color,'tube-glow');
+        tubeSegments.push({x1:bp.x,y1:bp.y,x2:lp.x,y2:lp.y,color:br.color,colorRGB:br.colorRGB});
+
+        const leaf=document.createElement('div');
+        leaf.className='leaf '+br.css;
+        leaf.style.left=lp.x+'px';leaf.style.top=lp.y+'px';
+        leaf.style.animation=`leafEnter .6s ease ${.6+leafDelay*.04}s forwards`;
+        leaf.innerHTML=`<div class="leaf-orb"><img src="${k.img}" loading="lazy"></div>`;
+
+        // Tooltip
+        leaf.addEventListener('mouseenter',e=>{
+            tip.textContent=k.n;
+            tip.style.left=e.clientX+'px';
+            tip.style.top=e.clientY+'px';
+            tip.classList.add('visible');
+        });
+        leaf.addEventListener('mousemove',e=>{
+            tip.style.left=e.clientX+'px';
+            tip.style.top=e.clientY+'px';
+        });
+        leaf.addEventListener('mouseleave',()=>tip.classList.remove('visible'));
+
+        world.appendChild(leaf);
+        leafDelay++;
+    });
+});
+
+// ════════════════════════════════════════════════════
+//  ANIMATION LOOP
+// ════════════════════════════════════════════════════
+function loop(t){
+    drawStars(t);
+    drawEnergy(t);
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ════════════════════════════════════════════════════
+//  ZOOM & PAN
+// ════════════════════════════════════════════════════
+let sc=1,px=0,py=0,pan=false,sx,sy;
+const upd=()=>world.style.transform=`translate(${px}px,${py}px) scale(${sc})`;
+document.getElementById('zi').onclick=()=>{sc=Math.min(3,sc+.2);upd()};
+document.getElementById('zo').onclick=()=>{sc=Math.max(.3,sc-.2);upd()};
+document.getElementById('rv').onclick=()=>{sc=1;px=0;py=0;upd()};
+const dg=document.getElementById('diagram');
+dg.onmousedown=e=>{pan=true;sx=e.clientX-px;sy=e.clientY-py;dg.classList.add('grabbing')};
+window.onmousemove=e=>{if(!pan)return;px=e.clientX-sx;py=e.clientY-sy;upd()};
+window.onmouseup=()=>{pan=false;dg.classList.remove('grabbing')};
+dg.addEventListener('wheel',e=>{e.preventDefault();sc=Math.max(.3,Math.min(3,sc+(e.deltaY>0?-.1:.1)));upd()},{passive:false});
+</script>
+</body>
+</html>
