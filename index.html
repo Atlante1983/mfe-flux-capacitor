@@ -158,34 +158,7 @@
             100%{opacity:1;transform:translate(-50%,-50%) scale(1)}
         }
 
-        /* ── Title ─────────────────────────────── */
-        .title{
-            position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:100;
-            text-align:center;pointer-events:none;
-            opacity:0;animation:fadeIn 1.5s ease .5s forwards;
-        }
-        .title h1{
-            font-family:'Space Mono',monospace;font-size:14px;font-weight:700;
-            letter-spacing:8px;text-transform:uppercase;
-            color:rgba(0,180,255,0.7);
-        }
-        .title p{
-            font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:3px;margin-top:3px;
-            font-family:'Space Mono',monospace;
-        }
         @keyframes fadeIn{0%{opacity:0;transform:translateX(-50%) translateY(-10px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
-
-        /* ── Legend ─────────────────────────────── */
-        .legend{
-            position:fixed;bottom:20px;left:20px;z-index:100;
-            display:flex;flex-direction:column;gap:6px;
-            padding:12px 16px;border-radius:12px;
-            background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);
-            backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-            opacity:0;animation:fadeIn 1.5s ease 1.5s forwards;
-        }
-        .legend-item{display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(255,255,255,0.5);font-weight:500}
-        .legend-dot{width:8px;height:8px;border-radius:50%}
 
         /* ── Controls ──────────────────────────── */
         .controls{
@@ -220,16 +193,7 @@
     <canvas id="bgCanvas"></canvas>
     <canvas id="energyCanvas"></canvas>
 
-    <div class="title">
-        <h1>MFE — MediaForEurope</h1>
-        <p>Flux Capacitor · Tech Connect 2026</p>
-    </div>
 
-    <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:#c0392b"></div>Mediaset España</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#16a085"></div>Mediaset Italia</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#7f8c8d"></div>ProSiebenSat.1</div>
-    </div>
 
     <div class="controls">
         <button class="ctrl" id="zi">+</button>
