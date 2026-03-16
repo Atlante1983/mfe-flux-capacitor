@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MFE — Flux Capacitor</title>
+    <title>MFE — Tech Connect</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         html,body{width:100%;height:100%;overflow:hidden;background:#06060e;font-family:'Outfit',sans-serif}
@@ -34,12 +35,12 @@
         #energyCanvas{position:fixed;inset:0;z-index:2;pointer-events:none}
 
         /* ── World ─────────────────────────────── */
-        #diagram{position:relative;width:100vw;height:100vh;z-index:3;overflow:hidden;cursor:grab}
+        #diagram{position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:3;overflow:visible;cursor:grab}
         #diagram.grabbing{cursor:grabbing}
-        #world{position:absolute;width:100%;height:100%;transform-origin:center center;transition:transform .25s cubic-bezier(.4,0,.2,1)}
+        #world{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:center center;transition:transform .25s cubic-bezier(.4,0,.2,1)}
 
         /* ── SVG tubes ─────────────────────────── */
-        #tubes{position:absolute;inset:0;z-index:1;pointer-events:none}
+        #tubes{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:visible;width:100vw;height:100vh}
         .tube{fill:none;stroke-width:4;stroke-linecap:round;opacity:.25}
         .tube-glow{fill:none;stroke-width:12;stroke-linecap:round;opacity:.08;filter:blur(6px)}
 
@@ -47,6 +48,7 @@
         .core{
             position:absolute;z-index:20;transform:translate(-50%,-50%);
             display:flex;align-items:center;justify-content:center;
+            pointer-events:none;
         }
         .core-outer{
             width:190px;height:190px;border-radius:50%;
@@ -76,10 +78,13 @@
         .core-inner{
             width:140px;height:140px;border-radius:50%;
             background:rgba(255,255,255,0.97);
-            display:flex;align-items:center;justify-content:center;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
             box-shadow:0 4px 30px rgba(0,0,0,.15);
         }
-        .core-inner img{width:105px;height:auto}
+        .tech-connect{display:flex;flex-direction:column;align-items:center;}
+        .tech-connect span:nth-child(1){font-size:26px;font-weight:900;color:#0b1e4a;letter-spacing:1px;line-height:1}
+        .tech-connect span:nth-child(2){font-size:18px;font-weight:900;color:#0088ff;letter-spacing:1px;line-height:1;margin-bottom:6px}
+        .tech-connect span:nth-child(3){font-size:9px;font-weight:700;color:#666;letter-spacing:1.5px;text-transform:uppercase}
 
         /* ── Hub nodes ─────────────────────────── */
         .hub{
@@ -88,21 +93,21 @@
             opacity:0;animation:nodeEnter .8s ease forwards;
         }
         .hub-ring{
-            width:115px;height:115px;border-radius:50%;
+            width:150px;height:150px;border-radius:50%;
             display:flex;align-items:center;justify-content:center;
             background:rgba(255,255,255,0.95);
-            border:2.5px solid;
+            border:3px solid;
             box-shadow:0 4px 25px rgba(0,0,0,.1);
             transition:transform .3s ease,box-shadow .3s ease;
             position:relative;
         }
         .hub:hover .hub-ring{transform:scale(1.08);box-shadow:0 8px 40px rgba(0,0,0,.2)}
         .hub-ring::before{
-            content:'';position:absolute;inset:-6px;border-radius:50%;
+            content:'';position:absolute;inset:-8px;border-radius:50%;
             border:1px solid;opacity:.2;
             animation:coreRing 8s linear infinite;
         }
-        .hub-ring img{width:78px;height:auto}
+        .hub-ring img{width:105px;height:auto;max-height:80px;object-fit:contain;}
 
         /* ── Leaf nodes ────────────────────────── */
         .leaf{
@@ -110,6 +115,7 @@
             display:flex;align-items:center;justify-content:center;
             opacity:0;
             transition:transform .3s cubic-bezier(.4,0,.2,1);
+            pointer-events:all;
         }
         .leaf:hover{transform:translate(-50%,-50%) scale(1.35)!important;z-index:25}
 
@@ -123,6 +129,7 @@
             -webkit-backdrop-filter:blur(10px);
             transition:all .3s ease;
             overflow:hidden;
+            pointer-events:none;
         }
         .leaf:hover .leaf-orb{
             box-shadow:0 4px 30px rgba(0,0,0,.15);
@@ -146,25 +153,31 @@
         .c-de .leaf-orb{border-color:rgba(52,73,94,.2)}
         .c-de .leaf:hover .leaf-orb{border-color:#34495e;box-shadow:0 4px 25px rgba(52,73,94,.2)}
 
-        /* ── Entrance animation ────────────────── */
+        /* ── Animations ────────────────────────── */
         @keyframes nodeEnter{
             0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}
             60%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}
             100%{opacity:1;transform:translate(-50%,-50%) scale(1)}
         }
-        @keyframes leafEnter{
-            0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}
-            70%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}
-            100%{opacity:1;transform:translate(-50%,-50%) scale(1)}
-        }
+        @keyframes fadeIn{0%{opacity:0;}100%{opacity:1;}}
 
-        @keyframes fadeIn{0%{opacity:0;transform:translateX(-50%) translateY(-10px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
+        /* ── Tooltip ───────────────────────────── */
+        .tooltip{
+            position:fixed;z-index:900;pointer-events:none;
+            padding:6px 14px;border-radius:8px;
+            background:rgba(0,0,0,0.85);color:#fff;font-size:12px;font-weight:600;
+            letter-spacing:.5px;white-space:nowrap;
+            backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+            border:1px solid rgba(255,255,255,0.1);
+            opacity:0;transition:opacity .2s;
+            transform:translate(-50%,-120%);
+        }
+        .tooltip.visible{opacity:1}
 
         /* ── Controls ──────────────────────────── */
         .controls{
-            position:fixed;bottom:20px;right:20px;z-index:100;
+            position:fixed;bottom:20px;right:20px;z-index:400;
             display:flex;gap:6px;
-            opacity:0;animation:fadeIn 1.5s ease 1.5s forwards;
         }
         .ctrl{
             width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);
@@ -175,25 +188,98 @@
         }
         .ctrl:hover{background:rgba(0,180,255,0.15);border-color:rgba(0,180,255,0.4);color:#fff}
 
-        /* ── Tooltip ───────────────────────────── */
-        .tooltip{
-            position:fixed;z-index:200;pointer-events:none;
-            padding:6px 14px;border-radius:8px;
-            background:rgba(0,0,0,0.85);color:#fff;font-size:12px;font-weight:600;
-            letter-spacing:.5px;white-space:nowrap;
-            backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-            border:1px solid rgba(255,255,255,0.1);
-            opacity:0;transition:opacity .2s;
-            transform:translate(-50%,-120%);
+        /* ── Side Panel ────────────────────────── */
+        .panel-toggle{
+            position:fixed;top:20px;left:20px;z-index:510;
+            width:48px;height:48px;border-radius:50%;
+            background:rgba(0,180,255,0.1);border:1px solid rgba(0,180,255,0.3);
+            display:flex;align-items:center;justify-content:center;
+            cursor:pointer;color:#fff;backdrop-filter:blur(10px);
+            transition:all .3s cubic-bezier(.4,0,.2,1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
-        .tooltip.visible{opacity:1}
+        .panel-toggle:hover{background:rgba(0,180,255,0.25);transform:scale(1.05);}
+        .panel-toggle svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;}
+        .panel-toggle.open {left: 310px;}
+        
+        .panel{
+            position:fixed;top:0;left:-340px;width:340px;height:100vh;
+            background:rgba(8,12,24,0.92);backdrop-filter:blur(25px);-webkit-backdrop-filter:blur(25px);
+            border-right:1px solid rgba(255,255,255,0.08);z-index:500;
+            transition:left .4s cubic-bezier(.4,0,.2,1);
+            display:flex;flex-direction:column;color:#fff;
+            padding:30px 24px;overflow-y:auto;box-shadow:15px 0 40px rgba(0,0,0,0.5);
+        }
+        .panel.open{left:0;}
+        .panel h2{font-size:18px;font-weight:700;margin-bottom:20px;letter-spacing:1px;color:rgba(0,180,255,0.9);}
+        
+        .btn-export{
+            background:linear-gradient(135deg,#0088ff 0%,#00c3ff 100%);color:#fff;
+            border:none;border-radius:8px;padding:12px;font-family:inherit;font-weight:700;
+            font-size:14px;cursor:pointer;transition:all .2s;
+            display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px;
+            box-shadow:0 4px 15px rgba(0,136,255,0.3);
+        }
+        .btn-export:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,136,255,0.4);}
+
+        .toggle-group{margin-bottom:24px;background:rgba(255,255,255,0.03);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.05);}
+        .toggle-row{display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;color:#ddd;}
+        
+        .switch {position: relative;display: inline-block;width: 44px;height: 24px;}
+        .switch input {opacity: 0;width: 0;height: 0;}
+        .slider {position: absolute;cursor: pointer;top: 0;left: 0;right: 0;bottom: 0;background-color: rgba(255,255,255,0.2);transition: .3s;border-radius: 24px;}
+        .slider:before {position: absolute;content: "";height: 18px;width: 18px;left: 3px;bottom: 3px;background-color: white;transition: .3s;border-radius: 50%;}
+        input:checked + .slider {background-color: #0088ff;}
+        input:checked + .slider:before {transform: translateX(20px);}
+
+        .branch-section{margin-bottom:20px;}
+        .branch-title{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+        .branch-title .dot{width:8px;height:8px;border-radius:50%;}
+        
+        .logo-list{display:flex;flex-direction:column;gap:8px;}
+        .logo-item{display:flex;align-items:center;gap:8px;font-size:13px;color:#bbb;cursor:pointer;}
+        .logo-item input{accent-color:#0088ff;width:16px;height:16px;cursor:pointer;}
+        .logo-item:hover{color:#fff;}
+
+        /* ── Export Mode overrides ──────────────── */
+        body.export-mode {background: transparent !important;}
+        body.export-mode::before, body.export-mode::after, body.export-mode #bgCanvas, body.export-mode #energyCanvas {display: none !important;}
+        body.export-mode .panel, body.export-mode .panel-toggle, body.export-mode .controls, body.export-mode .tooltip {display: none !important;}
+        body.export-mode .core-outer { animation: none !important; box-shadow: none !important; }
+        body.export-mode .core-outer::before, body.export-mode .core-outer::after { animation: none !important; }
+        body.export-mode .hub-ring::before { animation: none !important; border-color: rgba(0,0,0,0.1); }
+        body.export-mode .tube, body.export-mode .tube-glow { opacity: 0.8; stroke-width: 6; }
     </style>
 </head>
 <body>
     <canvas id="bgCanvas"></canvas>
     <canvas id="energyCanvas"></canvas>
 
+    <!-- Side Panel -->
+    <div class="panel-toggle" id="btnTogglePanel">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" id="menuIconPath"/></svg>
+    </div>
+    
+    <div class="panel" id="sidePanel">
+        <h2>🛠 Configuración</h2>
+        
+        <button class="btn-export" id="btnExport">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar Alta Calidad (PNG)
+        </button>
 
+        <div class="toggle-group">
+            <div class="toggle-row">
+                Animación y Partículas
+                <label class="switch">
+                    <input type="checkbox" id="animToggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div id="filterContainer"></div>
+    </div>
 
     <div class="controls">
         <button class="ctrl" id="zi">+</button>
@@ -206,95 +292,247 @@
     <div id="diagram">
         <div id="world">
             <svg id="tubes"></svg>
+            <div class="core" id="coreNode">
+                <div class="core-outer">
+                    <div class="core-inner">
+                        <div class="tech-connect">
+                            <span>TECH</span>
+                            <span>CONNECT</span>
+                            <span>Media For Europe</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
 <script>
 // ════════════════════════════════════════════════════
-//  DATA
+//  DATA & STATE
 // ════════════════════════════════════════════════════
 const B = '.';
 const branches = [
     {
-        id:'es', css:'c-es', color:'#c0392b', colorRGB:[192,57,43], angle:210,
+        id:'es', css:'c-es', color:'#c0392b', colorRGB:[192,57,43], angle:210, name:'Mediaset España',
         img:`${B}/MFE/Mediaset España - MFE.png`,
         kids:[
-            {n:'Telecinco',img:`${B}/MEDIASET ESPAÑA/Telecinco - Mediaset España.png`},
-            {n:'Cuatro',img:`${B}/MEDIASET ESPAÑA/Cuatro - Mediaset España.png`},
-            {n:'FDF',img:`${B}/MEDIASET ESPAÑA/FDF (Factoría de Ficción) - Mediaset España.png`},
-            {n:'Divinity',img:`${B}/MEDIASET ESPAÑA/Divinity - Mediaset España.png`},
-            {n:'Energy',img:`${B}/MEDIASET ESPAÑA/Energy - Mediaset España.png`},
-            {n:'Be Mad',img:`${B}/MEDIASET ESPAÑA/Be Mad - Mediaset España.png`},
-            {n:'Boing',img:`${B}/MEDIASET ESPAÑA/Boing - Mediaset España.png`},
-            {n:'Mtmad',img:`${B}/MEDIASET ESPAÑA/Mtmad - Mediaset España.png`},
-            {n:'ElDesmarque',img:`${B}/MEDIASET ESPAÑA/ElDesmarque - Mediaset España.png`},
-            {n:'Mediaset Infinity',img:`${B}/MEDIASET ESPAÑA/Mediaset Infinity - Mediaset España.png`},
-            {n:'Publiespaña',img:`${B}/MEDIASET ESPAÑA/Publiespaña - Mediaset España.png`},
-            {n:'Atlas',img:`${B}/MEDIASET ESPAÑA/Atlas - Mediaset España.png`},
-            {n:'Mediterráneo Mediaset',img:`${B}/MEDIASET ESPAÑA/Mediterráneo Mediaset - Mediaset España.png`},
-            {n:'Telecinco Cinema',img:`${B}/MEDIASET ESPAÑA/Telecinco Cinema - Mediaset España.png`},
-            {n:'Uppers',img:`${B}/MEDIASET ESPAÑA/Uppers - Mediaset España.png`},
-            {n:'Be a Lion',img:`${B}/MEDIASET ESPAÑA/Be a Lion - Mediaset España.png`},
-            {n:'12 Meses 12 Causas',img:`${B}/MEDIASET ESPAÑA/12 Meses 12 Causas - Mediaset España.png`},
+            {n:'Telecinco',def:true,img:`${B}/MEDIASET ESPAÑA/Telecinco - Mediaset España.png`},
+            {n:'Cuatro',def:true,img:`${B}/MEDIASET ESPAÑA/Cuatro - Mediaset España.png`},
+            {n:'Divinity',def:true,img:`${B}/MEDIASET ESPAÑA/Divinity - Mediaset España.png`},
+            {n:'Energy',def:true,img:`${B}/MEDIASET ESPAÑA/Energy - Mediaset España.png`},
+            {n:'Boing',def:true,img:`${B}/MEDIASET ESPAÑA/Boing - Mediaset España.png`},
+            {n:'Mediaset Infinity',def:true,img:`${B}/MEDIASET ESPAÑA/Mediaset Infinity - Mediaset España.png`},
+            {n:'ElDesmarque',def:true,img:`${B}/MEDIASET ESPAÑA/ElDesmarque - Mediaset España.png`},
+            {n:'Be Mad',def:true,img:`${B}/MEDIASET ESPAÑA/Be Mad - Mediaset España.png`},
+            {n:'FDF',def:false,img:`${B}/MEDIASET ESPAÑA/FDF (Factoría de Ficción) - Mediaset España.png`},
+            {n:'Mtmad',def:false,img:`${B}/MEDIASET ESPAÑA/Mtmad - Mediaset España.png`},
+            {n:'Publiespaña',def:false,img:`${B}/MEDIASET ESPAÑA/Publiespaña - Mediaset España.png`},
+            {n:'Atlas',def:false,img:`${B}/MEDIASET ESPAÑA/Atlas - Mediaset España.png`},
+            {n:'Mediterráneo Mediaset',def:false,img:`${B}/MEDIASET ESPAÑA/Mediterráneo Mediaset - Mediaset España.png`},
+            {n:'Telecinco Cinema',def:false,img:`${B}/MEDIASET ESPAÑA/Telecinco Cinema - Mediaset España.png`},
+            {n:'Uppers',def:false,img:`${B}/MEDIASET ESPAÑA/Uppers - Mediaset España.png`},
+            {n:'Be a Lion',def:false,img:`${B}/MEDIASET ESPAÑA/Be a Lion - Mediaset España.png`},
+            {n:'12 Meses 12 Causas',def:false,img:`${B}/MEDIASET ESPAÑA/12 Meses 12 Causas - Mediaset España.png`},
         ]
     },
     {
-        id:'de', css:'c-de', color:'#34495e', colorRGB:[52,73,94], angle:90,
+        id:'de', css:'c-de', color:'#34495e', colorRGB:[52,73,94], angle:90, name:'ProSiebenSat.1',
         img:`${B}/MFE/ProSiebenSat.1 - MFE.png`,
         kids:[
-            {n:'ProSieben',img:`${B}/PROSIEBENSAT.1 /ProSieben - ProSiebenSat.1.png`},
-            {n:'SAT.1',img:`${B}/PROSIEBENSAT.1 /SAT.1 - ProSiebenSat.1.png`},
-            {n:'Kabel Eins',img:`${B}/PROSIEBENSAT.1 /Kabel Eins - ProSiebenSat.1.png`},
-            {n:'Sixx',img:`${B}/PROSIEBENSAT.1 /Sixx - ProSiebenSat.1.png`},
-            {n:'SAT.1 Gold',img:`${B}/PROSIEBENSAT.1 /SAT.1 Gold - ProSiebenSat.1.png`},
-            {n:'ProSieben MAXX',img:`${B}/PROSIEBENSAT.1 /ProSieben MAXX - ProSiebenSat.1.png`},
-            {n:'Kabel Eins Doku',img:`${B}/PROSIEBENSAT.1 /Kabel Eins Doku - ProSiebenSat.1.png`},
-            {n:'Joyn',img:`${B}/PROSIEBENSAT.1 /Joyn - ProSiebenSat.1.png`},
-            {n:'Studio71',img:`${B}/PROSIEBENSAT.1 /Studio71 - ProSiebenSat.1.png`},
-            {n:'Seven.One Entertainment',img:`${B}/PROSIEBENSAT.1 /Seven.One Entertainment Group - ProSiebenSat.1.png`},
-            {n:'Seven.One Media',img:`${B}/PROSIEBENSAT.1 /Seven.One Media - ProSiebenSat.1.png`},
-            {n:'Verivox',img:`${B}/PROSIEBENSAT.1 /Verivox - ProSiebenSat.1.png`},
-            {n:'Flaconi',img:`${B}/PROSIEBENSAT.1 /Flaconi - ProSiebenSat.1.png`},
+            {n:'Joyn',def:true,img:`${B}/PROSIEBENSAT.1 /Joyn - ProSiebenSat.1.png`},
+            {n:'Kabel Eins',def:true,img:`${B}/PROSIEBENSAT.1 /Kabel Eins - ProSiebenSat.1.png`},
+            {n:'SAT.1',def:true,img:`${B}/PROSIEBENSAT.1 /SAT.1 - ProSiebenSat.1.png`},
+            {n:'ProSieben',def:true,img:`${B}/PROSIEBENSAT.1 /ProSieben - ProSiebenSat.1.png`},
+            {n:'Sixx',def:true,img:`${B}/PROSIEBENSAT.1 /Sixx - ProSiebenSat.1.png`},
+            {n:'SAT.1 Gold',def:false,img:`${B}/PROSIEBENSAT.1 /SAT.1 Gold - ProSiebenSat.1.png`},
+            {n:'ProSieben MAXX',def:false,img:`${B}/PROSIEBENSAT.1 /ProSieben MAXX - ProSiebenSat.1.png`},
+            {n:'Kabel Eins Doku',def:false,img:`${B}/PROSIEBENSAT.1 /Kabel Eins Doku - ProSiebenSat.1.png`},
+            {n:'Studio71',def:false,img:`${B}/PROSIEBENSAT.1 /Studio71 - ProSiebenSat.1.png`},
+            {n:'Seven.One Entertainment',def:false,img:`${B}/PROSIEBENSAT.1 /Seven.One Entertainment Group - ProSiebenSat.1.png`},
+            {n:'Seven.One Media',def:false,img:`${B}/PROSIEBENSAT.1 /Seven.One Media - ProSiebenSat.1.png`},
+            {n:'Verivox',def:false,img:`${B}/PROSIEBENSAT.1 /Verivox - ProSiebenSat.1.png`},
+            {n:'Flaconi',def:false,img:`${B}/PROSIEBENSAT.1 /Flaconi - ProSiebenSat.1.png`},
         ]
     },
     {
-        id:'it', css:'c-it', color:'#16a085', colorRGB:[22,160,133], angle:330,
+        id:'it', css:'c-it', color:'#16a085', colorRGB:[22,160,133], angle:330, name:'Mediaset Italia',
         img:`${B}/MFE/Mediaset Italia - MFE.png`,
         kids:[
-            {n:'Canale 5',img:`${B}/MEDIASET ITALIA/Canale 5 - Mediaset Italia.png`},
-            {n:'Italia 1',img:`${B}/MEDIASET ITALIA/Italia 1 - Mediaset Italia.png`},
-            {n:'Rete 4',img:`${B}/MEDIASET ITALIA/Rete 4 - Mediaset Italia.png`},
-            {n:'20 Mediaset',img:`${B}/MEDIASET ITALIA/20 Mediaset - Mediaset Italia.png`},
-            {n:'Iris',img:`${B}/MEDIASET ITALIA/Iris - Mediaset Italia.png`},
-            {n:'La5',img:`${B}/MEDIASET ITALIA/La5 - Mediaset Italia.png`},
-            {n:'Cine34',img:`${B}/MEDIASET ITALIA/Cine34 - Mediaset Italia.png`},
-            {n:'Focus',img:`${B}/MEDIASET ITALIA/Focus - Mediaset Italia.png`},
-            {n:'Top Crime',img:`${B}/MEDIASET ITALIA/Top Crime - Mediaset Italia.png`},
-            {n:'Mediaset Extra',img:`${B}/MEDIASET ITALIA/Mediaset Extra - Mediaset Italia.png`},
-            {n:'Boing',img:`${B}/MEDIASET ITALIA/Boing - Mediaset Italia.png`},
-            {n:'Cartoonito',img:`${B}/MEDIASET ITALIA/Cartoonito - Mediaset Italia.png`},
-            {n:'TGCom24',img:`${B}/MEDIASET ITALIA/TGCom24 - Mediaset Italia.png`},
-            {n:'Mediaset Infinity',img:`${B}/MEDIASET ITALIA/Mediaset Infinity - Mediaset Italia.png`},
-            {n:'RadioMediaset',img:`${B}/MEDIASET ITALIA/RadioMediaset - Mediaset Italia.png`},
-            {n:'Medusa Film',img:`${B}/MEDIASET ITALIA/Medusa Film - Mediaset Italia.png`},
-            {n:'Taodue',img:`${B}/MEDIASET ITALIA/Taodue - Mediaset Italia.png`},
+            {n:'Rete 4',def:true,img:`${B}/MEDIASET ITALIA/Rete 4 - Mediaset Italia.png`},
+            {n:'Italia 1',def:true,img:`${B}/MEDIASET ITALIA/Italia 1 - Mediaset Italia.png`},
+            {n:'Canale 5',def:true,img:`${B}/MEDIASET ITALIA/Canale 5 - Mediaset Italia.png`},
+            {n:'TGCom24',def:true,img:`${B}/MEDIASET ITALIA/TGCom24 - Mediaset Italia.png`},
+            {n:'20 Mediaset',def:true,img:`${B}/MEDIASET ITALIA/20 Mediaset - Mediaset Italia.png`},
+            {n:'Mediaset Infinity',def:true,img:`${B}/MEDIASET ITALIA/Mediaset Infinity - Mediaset Italia.png`},
+            {n:'Focus',def:true,img:`${B}/MEDIASET ITALIA/Focus - Mediaset Italia.png`},
+            {n:'Iris',def:false,img:`${B}/MEDIASET ITALIA/Iris - Mediaset Italia.png`},
+            {n:'Cine34',def:false,img:`${B}/MEDIASET ITALIA/Cine34 - Mediaset Italia.png`},
+            {n:'La5',def:false,img:`${B}/MEDIASET ITALIA/La5 - Mediaset Italia.png`},
+            {n:'Top Crime',def:false,img:`${B}/MEDIASET ITALIA/Top Crime - Mediaset Italia.png`},
+            {n:'Mediaset Extra',def:false,img:`${B}/MEDIASET ITALIA/Mediaset Extra - Mediaset Italia.png`},
+            {n:'Boing',def:false,img:`${B}/MEDIASET ITALIA/Boing - Mediaset Italia.png`},
+            {n:'Cartoonito',def:false,img:`${B}/MEDIASET ITALIA/Cartoonito - Mediaset Italia.png`},
+            {n:'RadioMediaset',def:false,img:`${B}/MEDIASET ITALIA/RadioMediaset - Mediaset Italia.png`},
+            {n:'Medusa Film',def:false,img:`${B}/MEDIASET ITALIA/Medusa Film - Mediaset Italia.png`},
+            {n:'Taodue',def:false,img:`${B}/MEDIASET ITALIA/Taodue - Mediaset Italia.png`},
         ]
     }
 ];
 
+// Initialize active state
+branches.forEach(b => b.kids.forEach((k,i) => { k.active = k.def; k.uid = b.id+'-'+i; }));
+
+let doAnim = true;
+
 // ════════════════════════════════════════════════════
-//  LAYOUT
+//  BUILD UI MENU
+// ════════════════════════════════════════════════════
+const filterContainer = document.getElementById('filterContainer');
+branches.forEach(b => {
+    let section = document.createElement('div');
+    section.className = 'branch-section';
+    section.innerHTML = `<div class="branch-title"><div class="dot" style="background:${b.color}"></div>${b.name}</div>`;
+    let list = document.createElement('div');
+    list.className = 'logo-list';
+    
+    b.kids.forEach(k => {
+        let label = document.createElement('label');
+        label.className = 'logo-item';
+        label.innerHTML = `<input type="checkbox" value="${k.uid}" ${k.active?'checked':''}> ${k.n}`;
+        label.querySelector('input').addEventListener('change', (e) => {
+            k.active = e.target.checked;
+            renderGraph();
+        });
+        list.appendChild(label);
+    });
+    section.appendChild(list);
+    filterContainer.appendChild(section);
+});
+
+const panel = document.getElementById('sidePanel');
+const btnToggle = document.getElementById('btnTogglePanel');
+const pathLine = document.getElementById('menuIconPath');
+btnToggle.addEventListener('click', () => {
+    panel.classList.toggle('open');
+    btnToggle.classList.toggle('open');
+    if(panel.classList.contains('open')){
+        pathLine.setAttribute('d', 'M6 18L18 6M6 6l12 12'); // X icon
+    } else {
+        pathLine.setAttribute('d', 'M4 6h16M4 12h16M4 18h16'); // Hamburger
+    }
+});
+
+document.getElementById('animToggle').addEventListener('change', (e) => {
+    doAnim = e.target.checked;
+});
+
+// ════════════════════════════════════════════════════
+//  LAYOUT & RENDERING SYSTEM
 // ════════════════════════════════════════════════════
 const W = window.innerWidth, H = window.innerHeight;
 const CX = W/2, CY = H*0.50;
-const BD = Math.min(W,H)*0.19;
-const LR = BD * 1.0;
+const BD = Math.min(W,H)*0.22; // Distance of main hubs
+const LR_base = BD * 1.0;      // Distance of leaves
 
 const rad = d => d*Math.PI/180;
 const pos = (cx,cy,a,d) => ({x:cx+Math.cos(rad(a))*d, y:cy-Math.sin(rad(a))*d});
 
+const world = document.getElementById('world');
+const svgEl = document.getElementById('tubes');
+const tip = document.getElementById('tip');
+const coreNode = document.getElementById('coreNode');
+coreNode.style.left = CX+'px';
+coreNode.style.top = CY+'px';
+
+let tubeSegments = []; 
+let floaters = [];
+let drawnNodes = [];
+
+function clearGraph(){
+    svgEl.innerHTML = '';
+    drawnNodes.forEach(n => world.removeChild(n));
+    drawnNodes = [];
+    tubeSegments = [];
+    floaters = [];
+}
+
+function mkSVGLine(x1,y1,x2,y2,color,cls){
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',x1);l.setAttribute('y1',y1);
+    l.setAttribute('x2',x2);l.setAttribute('y2',y2);
+    l.setAttribute('stroke',color);l.setAttribute('class',cls);
+    svgEl.appendChild(l);
+}
+
+function renderGraph() {
+    clearGraph();
+    let leafDelay = 0;
+
+    branches.forEach(br => {
+        const bp = pos(CX, CY, br.angle, BD);
+        mkSVGLine(CX, CY, bp.x, bp.y, br.color, 'tube');
+        mkSVGLine(CX, CY, bp.x, bp.y, br.color, 'tube-glow');
+        tubeSegments.push({x1:CX,y1:CY,x2:bp.x,y2:bp.y,color:br.color,colorRGB:br.colorRGB});
+
+        const hub = document.createElement('div');
+        hub.className = 'hub ' + br.css;
+        hub.style.left = bp.x + 'px';
+        hub.style.top = bp.y + 'px';
+        hub.innerHTML = `<div class="hub-ring"><img src="${br.img}"></div>`;
+        world.appendChild(hub);
+        drawnNodes.push(hub);
+        floaters.push({el:hub, ox:bp.x, oy:bp.y, px:Math.random()*Math.PI*2, py:Math.random()*Math.PI*2, sx:.0004+Math.random()*.0003, sy:.0003+Math.random()*.0003, ax:2+Math.random()*2, ay:1.5+Math.random()*2});
+
+        const activeKids = br.kids.filter(k => k.active);
+        const n = activeKids.length;
+        if(n === 0) return;
+
+        // Dynamic arc based on active items
+        const arc = Math.min(160, Math.max(80, n*16));
+        const sa = br.angle - arc/2;
+        const step = n>1 ? arc/(n-1) : 0;
+
+        activeKids.forEach((k, i) => {
+            const ca = sa + i*step;
+            const r = (i%3===0)? LR_base*1.4 : (i%3===1)? LR_base*1.1 : LR_base*.85;
+            const lp = pos(bp.x, bp.y, ca, r);
+
+            mkSVGLine(bp.x, bp.y, lp.x, lp.y, br.color, 'tube');
+            mkSVGLine(bp.x, bp.y, lp.x, lp.y, br.color, 'tube-glow');
+            tubeSegments.push({x1:bp.x,y1:bp.y,x2:lp.x,y2:lp.y,color:br.color,colorRGB:br.colorRGB});
+
+            const leaf = document.createElement('div');
+            leaf.className = 'leaf ' + br.css;
+            leaf.style.left = lp.x + 'px';
+            leaf.style.top = lp.y + 'px';
+            leaf.style.animation = `leafEnter .5s ease ${leafDelay*.04}s forwards`;
+            leaf.innerHTML = `<div class="leaf-orb"><img src="${k.img}" loading="lazy"></div>`;
+
+            leaf.addEventListener('mouseenter', e => {
+                tip.textContent = k.n;
+                tip.style.left = e.clientX + 'px';
+                tip.style.top = e.clientY + 'px';
+                tip.classList.add('visible');
+            });
+            leaf.addEventListener('mousemove', e => {
+                tip.style.left = e.clientX + 'px';
+                tip.style.top = e.clientY + 'px';
+            });
+            leaf.addEventListener('mouseleave', () => tip.classList.remove('visible'));
+
+            world.appendChild(leaf);
+            drawnNodes.push(leaf);
+            floaters.push({el:leaf, ox:lp.x, oy:lp.y, px:Math.random()*Math.PI*2, py:Math.random()*Math.PI*2, sx:.0005+Math.random()*.0005, sy:.0004+Math.random()*.0005, ax:4+Math.random()*3, ay:3+Math.random()*3});
+            leafDelay++;
+        });
+    });
+}
+
+// Initial render
+renderGraph();
+
 // ════════════════════════════════════════════════════
-//  BACKGROUND STARS
+//  BACKGROUND & ENERGY ANIMATIONS
 // ════════════════════════════════════════════════════
 const bgC = document.getElementById('bgCanvas');
 const bgX = bgC.getContext('2d');
@@ -303,14 +541,13 @@ bgC.width=W; bgC.height=H;
 const stars=[];
 for(let i=0;i<120;i++) stars.push({
     x:Math.random()*W, y:Math.random()*H,
-    r:Math.random()*1.2+.3,
-    a:Math.random()*.3+.05,
-    s:Math.random()*.003+.001,
-    p:Math.random()*Math.PI*2
+    r:Math.random()*1.2+.3, a:Math.random()*.3+.05,
+    s:Math.random()*.003+.001, p:Math.random()*Math.PI*2
 });
 
 function drawStars(t){
     bgX.clearRect(0,0,W,H);
+    if(!doAnim) return;
     stars.forEach(s=>{
         const alpha = s.a + Math.sin(t*s.s + s.p)*.15;
         bgX.beginPath();
@@ -320,30 +557,23 @@ function drawStars(t){
     });
 }
 
-// ════════════════════════════════════════════════════
-//  ENERGY PARTICLES
-// ════════════════════════════════════════════════════
 const eC = document.getElementById('energyCanvas');
 const eX = eC.getContext('2d');
 eC.width=W; eC.height=H;
-
-const tubeSegments = []; // {x1,y1,x2,y2,color,colorRGB}
-const energyParticles = [];
+let energyParticles = [];
 
 function spawnEnergy(){
+    if(!doAnim) return;
     tubeSegments.forEach(seg=>{
         if(Math.random()<0.04){
-            energyParticles.push({
-                t:0, speed:.003+Math.random()*.004,
-                seg, size:Math.random()*2.5+1,
-                trail:[]
-            });
+            energyParticles.push({t:0, speed:.003+Math.random()*.004, seg, size:Math.random()*2+1, trail:[]});
         }
     });
 }
 
 function drawEnergy(time){
     eX.clearRect(0,0,W,H);
+    if(!doAnim){ energyParticles = []; return; }
     spawnEnergy();
 
     for(let i=energyParticles.length-1;i>=0;i--){
@@ -356,121 +586,30 @@ function drawEnergy(time){
         const y=s.y1+(s.y2-s.y1)*p.t;
 
         p.trail.push({x,y});
-        if(p.trail.length>12) p.trail.shift();
+        if(p.trail.length>10) p.trail.shift();
 
         // Trail
         for(let j=0;j<p.trail.length;j++){
             const alpha=(j/p.trail.length)*0.4;
             const r=p.size*(j/p.trail.length);
-            eX.beginPath();
-            eX.arc(p.trail[j].x, p.trail[j].y, r, 0, Math.PI*2);
+            eX.beginPath(); eX.arc(p.trail[j].x, p.trail[j].y, r, 0, Math.PI*2);
             eX.fillStyle=`rgba(${s.colorRGB[0]},${s.colorRGB[1]},${s.colorRGB[2]},${alpha})`;
             eX.fill();
         }
-
-        // Head glow
-        eX.beginPath();
-        eX.arc(x,y,p.size*1.5,0,Math.PI*2);
-        eX.fillStyle=`rgba(255,255,255,0.7)`;
-        eX.fill();
-
-        eX.beginPath();
-        eX.arc(x,y,p.size*3,0,Math.PI*2);
-        eX.fillStyle=`rgba(${s.colorRGB[0]},${s.colorRGB[1]},${s.colorRGB[2]},0.15)`;
-        eX.fill();
+        // Head
+        eX.beginPath(); eX.arc(x,y,p.size*1.5,0,Math.PI*2);
+        eX.fillStyle=`rgba(255,255,255,0.7)`; eX.fill();
     }
 
-    // Central core glow pulse
     const pulse = Math.sin(time*0.002)*0.3+0.7;
     const grad = eX.createRadialGradient(CX,CY,20,CX,CY,100*pulse);
     grad.addColorStop(0,`rgba(0,180,255,${0.06*pulse})`);
     grad.addColorStop(1,'rgba(0,180,255,0)');
-    eX.fillStyle=grad;
-    eX.fillRect(CX-120,CY-120,240,240);
+    eX.fillStyle=grad; eX.fillRect(CX-120,CY-120,240,240);
 }
 
-// ════════════════════════════════════════════════════
-//  BUILD DOM
-// ════════════════════════════════════════════════════
-const world = document.getElementById('world');
-const svgEl = document.getElementById('tubes');
-const tip = document.getElementById('tip');
-const floaters = [];
-
-function mkSVGLine(x1,y1,x2,y2,color,cls){
-    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
-    l.setAttribute('x1',x1);l.setAttribute('y1',y1);
-    l.setAttribute('x2',x2);l.setAttribute('y2',y2);
-    l.setAttribute('stroke',color);l.setAttribute('class',cls);
-    svgEl.appendChild(l);
-}
-
-// Core
-const coreEl=document.createElement('div');
-coreEl.className='core';
-coreEl.style.left=CX+'px';coreEl.style.top=CY+'px';
-coreEl.innerHTML=`<div class="core-outer"><div class="core-inner"><img src="${B}/MFE/MediaForEurope (MFE) - MFE.png" alt="MFE"></div></div>`;
-world.appendChild(coreEl);
-
-// Branches
-let leafDelay=0;
-branches.forEach(br=>{
-    const bp=pos(CX,CY,br.angle,BD);
-    mkSVGLine(CX,CY,bp.x,bp.y,br.color,'tube');
-    mkSVGLine(CX,CY,bp.x,bp.y,br.color,'tube-glow');
-    tubeSegments.push({x1:CX,y1:CY,x2:bp.x,y2:bp.y,color:br.color,colorRGB:br.colorRGB});
-
-    const hub=document.createElement('div');
-    hub.className='hub '+br.css;
-    hub.style.left=bp.x+'px';hub.style.top=bp.y+'px';
-    hub.style.animationDelay='.4s';
-    hub.innerHTML=`<div class="hub-ring"><img src="${br.img}"></div>`;
-    world.appendChild(hub);
-    floaters.push({el:hub, ox:bp.x, oy:bp.y, px:Math.random()*Math.PI*2, py:Math.random()*Math.PI*2, sx:.0004+Math.random()*.0003, sy:.0003+Math.random()*.0003, ax:3+Math.random()*2, ay:2.5+Math.random()*2});
-
-    const n=br.kids.length;
-    const arc=Math.min(150,n*10);
-    const sa=br.angle-arc/2;
-    const step=arc/(n-1||1);
-
-    br.kids.forEach((k,i)=>{
-        const ca=sa+i*step;
-        const r=(i%3===0)?LR*1.4:(i%3===1)?LR*1.1:LR*.85;
-        const lp=pos(bp.x,bp.y,ca,r);
-
-        mkSVGLine(bp.x,bp.y,lp.x,lp.y,br.color,'tube');
-        mkSVGLine(bp.x,bp.y,lp.x,lp.y,br.color,'tube-glow');
-        tubeSegments.push({x1:bp.x,y1:bp.y,x2:lp.x,y2:lp.y,color:br.color,colorRGB:br.colorRGB});
-
-        const leaf=document.createElement('div');
-        leaf.className='leaf '+br.css;
-        leaf.style.left=lp.x+'px';leaf.style.top=lp.y+'px';
-        leaf.style.animation=`leafEnter .6s ease ${.6+leafDelay*.04}s forwards`;
-        leaf.innerHTML=`<div class="leaf-orb"><img src="${k.img}" loading="lazy"></div>`;
-
-        // Tooltip
-        leaf.addEventListener('mouseenter',e=>{
-            tip.textContent=k.n;
-            tip.style.left=e.clientX+'px';
-            tip.style.top=e.clientY+'px';
-            tip.classList.add('visible');
-        });
-        leaf.addEventListener('mousemove',e=>{
-            tip.style.left=e.clientX+'px';
-            tip.style.top=e.clientY+'px';
-        });
-        leaf.addEventListener('mouseleave',()=>tip.classList.remove('visible'));
-
-        world.appendChild(leaf);
-        floaters.push({el:leaf, ox:lp.x, oy:lp.y, px:Math.random()*Math.PI*2, py:Math.random()*Math.PI*2, sx:.0005+Math.random()*.0005, sy:.0004+Math.random()*.0005, ax:4+Math.random()*3, ay:3+Math.random()*3});
-        leafDelay++;
-    });
-});
-
-// ════════════════════════════════════════════════════
-//  ORGANIC FLOATING
-// ════════════════════════════════════════════════════
 function animateFloat(t){
+    if(!doAnim) return;
     floaters.forEach(f=>{
         const dx = Math.sin(t*f.sx + f.px) * f.ax;
         const dy = Math.cos(t*f.sy + f.py) * f.ay;
@@ -479,9 +618,6 @@ function animateFloat(t){
     });
 }
 
-// ════════════════════════════════════════════════════
-//  ANIMATION LOOP
-// ════════════════════════════════════════════════════
 function loop(t){
     drawStars(t);
     drawEnergy(t);
@@ -499,10 +635,57 @@ document.getElementById('zi').onclick=()=>{sc=Math.min(3,sc+.2);upd()};
 document.getElementById('zo').onclick=()=>{sc=Math.max(.3,sc-.2);upd()};
 document.getElementById('rv').onclick=()=>{sc=1;px=0;py=0;upd()};
 const dg=document.getElementById('diagram');
-dg.onmousedown=e=>{pan=true;sx=e.clientX-px;sy=e.clientY-py;dg.classList.add('grabbing')};
+dg.onmousedown=e=>{
+    if(e.button !== 0 || e.target.closest('.panel') || e.target.closest('.panel-toggle')) return;
+    pan=true;sx=e.clientX-px;sy=e.clientY-py;dg.classList.add('grabbing');
+};
 window.onmousemove=e=>{if(!pan)return;px=e.clientX-sx;py=e.clientY-sy;upd()};
 window.onmouseup=()=>{pan=false;dg.classList.remove('grabbing')};
-dg.addEventListener('wheel',e=>{e.preventDefault();sc=Math.max(.3,Math.min(3,sc+(e.deltaY>0?-.1:.1)));upd()},{passive:false});
+dg.addEventListener('wheel',e=>{
+    if(e.target.closest('.panel')) return; // Allow scroll in panel
+    e.preventDefault();
+    sc=Math.max(.3,Math.min(3,sc+(e.deltaY>0?-.1:.1)));
+    upd();
+},{passive:false});
+
+// ════════════════════════════════════════════════════
+//  PNG EXPORT FUNCTION
+// ════════════════════════════════════════════════════
+document.getElementById('btnExport').addEventListener('click', async () => {
+    // Save current zoom state and reset it temporarily for capture
+    const oldSc = sc, oldPx = px, oldPy = py;
+    sc = 1; px = 0; py = 0; upd();
+    
+    // Prepare DOM for transparent export
+    document.body.classList.add('export-mode');
+    if(panel.classList.contains('open')) btnToggle.click(); // Close panel
+
+    // Small delay to ensure styles apply
+    await new Promise(r => setTimeout(r, 100));
+
+    try {
+        const canvas = await html2canvas(document.getElementById('diagram'), {
+            backgroundColor: null,
+            scale: 2.5, // High resolution output
+            useCORS: true,
+            logging: false,
+            allowTaint: true
+        });
+
+        // Trigger download
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = `MFE_Tech_Connect_Export_${Date.now()}.png`;
+        a.click();
+    } catch (e) {
+        console.error("Export failed:", e);
+        alert('Hubo un error al exportar la imagen. Revisa la consola.');
+    } finally {
+        // Restore DOM and zoom
+        document.body.classList.remove('export-mode');
+        sc = oldSc; px = oldPx; py = oldPy; upd();
+    }
+});
 </script>
 </body>
 </html>
