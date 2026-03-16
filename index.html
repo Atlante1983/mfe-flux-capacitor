@@ -93,7 +93,7 @@
             opacity:0;animation:nodeEnter .8s ease forwards;
         }
         .hub-ring{
-            width:180px;height:180px;border-radius:50%;
+            width:210px;height:210px;border-radius:50%;
             display:flex;align-items:center;justify-content:center;
             background:rgba(255,255,255,0.95);
             border:3px solid;
@@ -107,7 +107,7 @@
             border:1px solid;opacity:.2;
             animation:coreRing 8s linear infinite;
         }
-        .hub-ring img{width:125px;height:auto;max-height:100px;object-fit:contain;}
+        .hub-ring img{width:145px;height:auto;max-height:120px;object-fit:contain;}
 
         /* ── Leaf nodes ────────────────────────── */
         .leaf{
@@ -120,7 +120,7 @@
         .leaf:hover{transform:translate(-50%,-50%) scale(1.35)!important;z-index:25}
 
         .leaf-orb{
-            width:94px;height:94px;border-radius:50%;
+            width:106px;height:106px;border-radius:50%;
             background:rgba(255,255,255,0.93);
             border:1.5px solid rgba(255,255,255,0.6);
             display:flex;align-items:center;justify-content:center;
@@ -135,7 +135,7 @@
             box-shadow:0 4px 30px rgba(0,0,0,.15);
             border-color:rgba(255,255,255,0.9);
         }
-        .leaf-orb img{width:68px;height:68px;object-fit:contain}
+        .leaf-orb img{width:78px;height:78px;object-fit:contain}
 
         /* ── Branch colors ─────────────────────── */
         .c-es .hub-ring{border-color:#c0392b}
@@ -249,6 +249,7 @@
         body.export-mode .core-outer::before, body.export-mode .core-outer::after { animation: none !important; }
         body.export-mode .hub-ring::before { animation: none !important; border-color: rgba(0,0,0,0.1); }
         body.export-mode .tube, body.export-mode .tube-glow { opacity: 0.8; stroke-width: 6; }
+        body.export-mode * { transition: none !important; animation: none !important; }
     </style>
 </head>
 <body>
@@ -444,8 +445,8 @@ document.getElementById('linesToggle').addEventListener('change', (e) => {
 // ════════════════════════════════════════════════════
 const W = window.innerWidth, H = window.innerHeight;
 const CX = W/2, CY = H*0.50;
-const BD = Math.min(W,H)*0.30; // Distance of main hubs (pushed slightly out)
-const LR_base = BD * 0.75;     // Leaves closer relative to main hubs
+const BD = Math.min(W,H)*0.32; // Distance of main hubs (pushed out slightly more for bigger logos)
+const LR_base = BD * 0.72;     // Leaves slightly tighter
 
 const rad = d => d*Math.PI/180;
 const pos = (cx,cy,a,d) => ({x:cx+Math.cos(rad(a))*d, y:cy-Math.sin(rad(a))*d});
@@ -685,15 +686,16 @@ document.getElementById('btnExport').addEventListener('click', async () => {
     const oldTransform = world.style.transform;
     
     // Reset transform completely so html2canvas processes true geometry without clipping
-    sc = 0.82; px = 0; py = 0; 
-    world.style.transform = 'none';
+    // the zoom out to 0.75 ensures all ultra-large nodes fit solidly inside WxH bounds
+    sc = 0.75; px = 0; py = 0; 
+    world.style.transform = `translate(0px,0px) scale(0.75)`;
     
     // Prepare DOM for transparent export
     document.body.classList.add('export-mode');
     if(panel.classList.contains('open')) btnToggle.click(); // Close panel
 
-    // Small delay to ensure styles apply
-    await new Promise(r => setTimeout(r, 100));
+    // High delay to ensure CSS transitions (especially transform) reach their final state before capturing
+    await new Promise(r => setTimeout(r, 600));
 
     try {
         const captureArea = document.getElementById('diagram');
