@@ -682,7 +682,11 @@ dg.addEventListener('wheel',e=>{
 document.getElementById('btnExport').addEventListener('click', async () => {
     // Save current zoom state and reset it temporarily for capture
     const oldSc = sc, oldPx = px, oldPy = py;
-    sc = 0.82; px = 0; py = 0; upd();
+    const oldTransform = world.style.transform;
+    
+    // Reset transform completely so html2canvas processes true geometry without clipping
+    sc = 0.82; px = 0; py = 0; 
+    world.style.transform = 'none';
     
     // Prepare DOM for transparent export
     document.body.classList.add('export-mode');
@@ -692,17 +696,26 @@ document.getElementById('btnExport').addEventListener('click', async () => {
     await new Promise(r => setTimeout(r, 100));
 
     try {
-        const canvas = await html2canvas(document.getElementById('diagram'), {
+        const captureArea = document.getElementById('diagram');
+        const canvas = await html2canvas(captureArea, {
             backgroundColor: null,
-            scale: 2.5, // High resolution output
+            scale: 3, // Maximum resolution output
             useCORS: true,
             logging: false,
-            allowTaint: true
+            allowTaint: true,
+            width: W,
+            height: H,
+            windowWidth: W,
+            windowHeight: H,
+            x: 0,
+            y: 0,
+            scrollX: 0,
+            scrollY: 0
         });
 
         // Trigger download
         const a = document.createElement('a');
-        a.href = canvas.toDataURL('image/png');
+        a.href = canvas.toDataURL('image/png', 1.0);
         a.download = `MFE_Tech_Connect_Export_${Date.now()}.png`;
         a.click();
     } catch (e) {
@@ -711,7 +724,8 @@ document.getElementById('btnExport').addEventListener('click', async () => {
     } finally {
         // Restore DOM and zoom
         document.body.classList.remove('export-mode');
-        sc = oldSc; px = oldPx; py = oldPy; upd();
+        sc = oldSc; px = oldPx; py = oldPy; 
+        world.style.transform = oldTransform;
     }
 });
 </script>
