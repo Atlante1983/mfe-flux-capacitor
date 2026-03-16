@@ -486,8 +486,8 @@ function renderGraph() {
         if (doLines) {
             mkSVGLine(CX, CY, bp.x, bp.y, br.color, 'tube');
             mkSVGLine(CX, CY, bp.x, bp.y, br.color, 'tube-glow');
+            tubeSegments.push({x1:CX,y1:CY,x2:bp.x,y2:bp.y,color:br.color,colorRGB:br.colorRGB});
         }
-        if (doAnim && doLines) tubeSegments.push({x1:CX,y1:CY,x2:bp.x,y2:bp.y,color:br.color,colorRGB:br.colorRGB});
 
         const hub = document.createElement('div');
         hub.className = 'hub ' + br.css;
@@ -517,7 +517,7 @@ function renderGraph() {
             if (doLines) {
                 mkSVGLine(bp.x, bp.y, lp.x, lp.y, br.color, 'tube');
                 mkSVGLine(bp.x, bp.y, lp.x, lp.y, br.color, 'tube-glow');
-                if (doAnim) tubeSegments.push({x1:bp.x,y1:bp.y,x2:lp.x,y2:lp.y,color:br.color,colorRGB:br.colorRGB});
+                tubeSegments.push({x1:bp.x,y1:bp.y,x2:lp.x,y2:lp.y,color:br.color,colorRGB:br.colorRGB});
             }
 
             const leaf = document.createElement('div');
@@ -592,7 +592,7 @@ function spawnEnergy(){
 
 function drawEnergy(time){
     eX.clearRect(0,0,W,H);
-    if(!doAnim){ energyParticles = []; return; }
+    if(!doAnim) { energyParticles = []; return; }
     spawnEnergy();
 
     for(let i=energyParticles.length-1;i>=0;i--){
@@ -601,30 +601,36 @@ function drawEnergy(time){
         if(p.t>1){energyParticles.splice(i,1);continue}
 
         const s=p.seg;
-        const x=s.x1+(s.x2-s.x1)*p.t;
-        const y=s.y1+(s.y2-s.y1)*p.t;
+        const lx=s.x1+(s.x2-s.x1)*p.t;
+        const ly=s.y1+(s.y2-s.y1)*p.t;
+        
+        // Transform logical coords to actual screen coords (camera pan/zoom)
+        const x = lx * sc + px;
+        const y = ly * sc + py;
 
         p.trail.push({x,y});
-        if(p.trail.length>10) p.trail.shift();
+        if(p.trail.length>20) p.trail.shift();
 
         // Trail
         for(let j=0;j<p.trail.length;j++){
             const alpha=(j/p.trail.length)*0.4;
-            const r=p.size*(j/p.trail.length);
+            const r=p.size*(j/p.trail.length) * sc; // scale size with zoom
             eX.beginPath(); eX.arc(p.trail[j].x, p.trail[j].y, r, 0, Math.PI*2);
             eX.fillStyle=`rgba(${s.colorRGB[0]},${s.colorRGB[1]},${s.colorRGB[2]},${alpha})`;
             eX.fill();
         }
         // Head
-        eX.beginPath(); eX.arc(x,y,p.size*1.5,0,Math.PI*2);
+        eX.beginPath(); eX.arc(x,y,p.size*1.5 * sc,0,Math.PI*2);
         eX.fillStyle=`rgba(255,255,255,0.7)`; eX.fill();
     }
 
     const pulse = Math.sin(time*0.002)*0.3+0.7;
-    const grad = eX.createRadialGradient(CX,CY,20,CX,CY,100*pulse);
+    const cw = 140 * sc; // core width
+    const grad = eX.createRadialGradient(CX*sc+px, CY*sc+py, 20*sc, CX*sc+px, CY*sc+py, cw*pulse);
     grad.addColorStop(0,`rgba(0,180,255,${0.06*pulse})`);
     grad.addColorStop(1,'rgba(0,180,255,0)');
-    eX.fillStyle=grad; eX.fillRect(CX-120,CY-120,240,240);
+    eX.fillStyle=grad; 
+    eX.fillRect(0,0,W,H);
 }
 
 function animateFloat(t){
