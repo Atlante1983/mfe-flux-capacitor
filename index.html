@@ -93,7 +93,7 @@
             opacity:0;animation:nodeEnter .8s ease forwards;
         }
         .hub-ring{
-            width:150px;height:150px;border-radius:50%;
+            width:180px;height:180px;border-radius:50%;
             display:flex;align-items:center;justify-content:center;
             background:rgba(255,255,255,0.95);
             border:3px solid;
@@ -107,7 +107,7 @@
             border:1px solid;opacity:.2;
             animation:coreRing 8s linear infinite;
         }
-        .hub-ring img{width:105px;height:auto;max-height:80px;object-fit:contain;}
+        .hub-ring img{width:125px;height:auto;max-height:100px;object-fit:contain;}
 
         /* ── Leaf nodes ────────────────────────── */
         .leaf{
@@ -120,7 +120,7 @@
         .leaf:hover{transform:translate(-50%,-50%) scale(1.35)!important;z-index:25}
 
         .leaf-orb{
-            width:76px;height:76px;border-radius:50%;
+            width:94px;height:94px;border-radius:50%;
             background:rgba(255,255,255,0.93);
             border:1.5px solid rgba(255,255,255,0.6);
             display:flex;align-items:center;justify-content:center;
@@ -135,7 +135,7 @@
             box-shadow:0 4px 30px rgba(0,0,0,.15);
             border-color:rgba(255,255,255,0.9);
         }
-        .leaf-orb img{width:56px;height:56px;object-fit:contain}
+        .leaf-orb img{width:68px;height:68px;object-fit:contain}
 
         /* ── Branch colors ─────────────────────── */
         .c-es .hub-ring{border-color:#c0392b}
@@ -269,10 +269,17 @@
         </button>
 
         <div class="toggle-group">
-            <div class="toggle-row">
-                Animación y Partículas
+            <div class="toggle-row" style="margin-bottom: 12px;">
+                Partículas de Energía
                 <label class="switch">
                     <input type="checkbox" id="animToggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                Líneas de Conexión
+                <label class="switch">
+                    <input type="checkbox" id="linesToggle" checked>
                     <span class="slider"></span>
                 </label>
             </div>
@@ -383,6 +390,7 @@ const branches = [
 branches.forEach(b => b.kids.forEach((k,i) => { k.active = k.def; k.uid = b.id+'-'+i; }));
 
 let doAnim = true;
+let doLines = true;
 
 // ════════════════════════════════════════════════════
 //  BUILD UI MENU
@@ -424,6 +432,10 @@ btnToggle.addEventListener('click', () => {
 
 document.getElementById('animToggle').addEventListener('change', (e) => {
     doAnim = e.target.checked;
+});
+
+document.getElementById('linesToggle').addEventListener('change', (e) => {
+    doLines = e.target.checked;
     renderGraph(); // Re-render to toggle lines!
 });
 
@@ -432,8 +444,8 @@ document.getElementById('animToggle').addEventListener('change', (e) => {
 // ════════════════════════════════════════════════════
 const W = window.innerWidth, H = window.innerHeight;
 const CX = W/2, CY = H*0.50;
-const BD = Math.min(W,H)*0.24; // Distance of main hubs
-const LR_base = BD * 1.15;      // Distance of leaves
+const BD = Math.min(W,H)*0.30; // Distance of main hubs (pushed slightly out)
+const LR_base = BD * 0.75;     // Leaves closer relative to main hubs
 
 const rad = d => d*Math.PI/180;
 const pos = (cx,cy,a,d) => ({x:cx+Math.cos(rad(a))*d, y:cy-Math.sin(rad(a))*d});
@@ -471,11 +483,11 @@ function renderGraph() {
 
     branches.forEach(br => {
         const bp = pos(CX, CY, br.angle, BD);
-        if (doAnim) {
+        if (doLines) {
             mkSVGLine(CX, CY, bp.x, bp.y, br.color, 'tube');
             mkSVGLine(CX, CY, bp.x, bp.y, br.color, 'tube-glow');
         }
-        if (doAnim) tubeSegments.push({x1:CX,y1:CY,x2:bp.x,y2:bp.y,color:br.color,colorRGB:br.colorRGB});
+        if (doAnim && doLines) tubeSegments.push({x1:CX,y1:CY,x2:bp.x,y2:bp.y,color:br.color,colorRGB:br.colorRGB});
 
         const hub = document.createElement('div');
         hub.className = 'hub ' + br.css;
@@ -491,21 +503,21 @@ function renderGraph() {
         if(n === 0) return;
 
         // Dynamic arc based on active items, give them plenty of space
-        const arc = Math.min(180, Math.max(90, n*22));
+        const arc = Math.min(220, Math.max(120, n*25)); // Wider arc to prevent overlaps with larger orbs
         const sa = br.angle - arc/2;
         const step = n>1 ? arc/(n-1) : 0;
 
         // Start drawing leaves from the outer edges inwards for a more balanced look
         activeKids.forEach((k, i) => {
             const ca = sa + i*step;
-            // Slightly alternate radius to pack them cleanly if many, or keep uniform if few
-            const r = n > 5 ? LR_base * (1.0 + (i%2!==0 ? 0.35 : 0)) : LR_base * 1.1; 
+            // Provide noticeable staggering to pack them tightly without overlaps
+            const r = n > 4 ? LR_base * (1.0 + (i%2!==0 ? 0.35 : 0)) : LR_base; 
             const lp = pos(bp.x, bp.y, ca, r);
 
-            if (doAnim) {
+            if (doLines) {
                 mkSVGLine(bp.x, bp.y, lp.x, lp.y, br.color, 'tube');
                 mkSVGLine(bp.x, bp.y, lp.x, lp.y, br.color, 'tube-glow');
-                tubeSegments.push({x1:bp.x,y1:bp.y,x2:lp.x,y2:lp.y,color:br.color,colorRGB:br.colorRGB});
+                if (doAnim) tubeSegments.push({x1:bp.x,y1:bp.y,x2:lp.x,y2:lp.y,color:br.color,colorRGB:br.colorRGB});
             }
 
             const leaf = document.createElement('div');
