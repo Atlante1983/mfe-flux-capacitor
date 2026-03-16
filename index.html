@@ -120,7 +120,7 @@
         .leaf:hover{transform:translate(-50%,-50%) scale(1.35)!important;z-index:25}
 
         .leaf-orb{
-            width:62px;height:62px;border-radius:50%;
+            width:76px;height:76px;border-radius:50%;
             background:rgba(255,255,255,0.93);
             border:1.5px solid rgba(255,255,255,0.6);
             display:flex;align-items:center;justify-content:center;
@@ -135,7 +135,7 @@
             box-shadow:0 4px 30px rgba(0,0,0,.15);
             border-color:rgba(255,255,255,0.9);
         }
-        .leaf-orb img{width:44px;height:44px;object-fit:contain}
+        .leaf-orb img{width:56px;height:56px;object-fit:contain}
 
         /* ── Branch colors ─────────────────────── */
         .c-es .hub-ring{border-color:#c0392b}
@@ -424,6 +424,7 @@ btnToggle.addEventListener('click', () => {
 
 document.getElementById('animToggle').addEventListener('change', (e) => {
     doAnim = e.target.checked;
+    renderGraph(); // Re-render to toggle lines!
 });
 
 // ════════════════════════════════════════════════════
@@ -431,8 +432,8 @@ document.getElementById('animToggle').addEventListener('change', (e) => {
 // ════════════════════════════════════════════════════
 const W = window.innerWidth, H = window.innerHeight;
 const CX = W/2, CY = H*0.50;
-const BD = Math.min(W,H)*0.22; // Distance of main hubs
-const LR_base = BD * 1.0;      // Distance of leaves
+const BD = Math.min(W,H)*0.24; // Distance of main hubs
+const LR_base = BD * 1.15;      // Distance of leaves
 
 const rad = d => d*Math.PI/180;
 const pos = (cx,cy,a,d) => ({x:cx+Math.cos(rad(a))*d, y:cy-Math.sin(rad(a))*d});
@@ -470,9 +471,11 @@ function renderGraph() {
 
     branches.forEach(br => {
         const bp = pos(CX, CY, br.angle, BD);
-        mkSVGLine(CX, CY, bp.x, bp.y, br.color, 'tube');
-        mkSVGLine(CX, CY, bp.x, bp.y, br.color, 'tube-glow');
-        tubeSegments.push({x1:CX,y1:CY,x2:bp.x,y2:bp.y,color:br.color,colorRGB:br.colorRGB});
+        if (doAnim) {
+            mkSVGLine(CX, CY, bp.x, bp.y, br.color, 'tube');
+            mkSVGLine(CX, CY, bp.x, bp.y, br.color, 'tube-glow');
+        }
+        if (doAnim) tubeSegments.push({x1:CX,y1:CY,x2:bp.x,y2:bp.y,color:br.color,colorRGB:br.colorRGB});
 
         const hub = document.createElement('div');
         hub.className = 'hub ' + br.css;
@@ -487,25 +490,29 @@ function renderGraph() {
         const n = activeKids.length;
         if(n === 0) return;
 
-        // Dynamic arc based on active items
-        const arc = Math.min(160, Math.max(80, n*16));
+        // Dynamic arc based on active items, give them plenty of space
+        const arc = Math.min(180, Math.max(90, n*22));
         const sa = br.angle - arc/2;
         const step = n>1 ? arc/(n-1) : 0;
 
+        // Start drawing leaves from the outer edges inwards for a more balanced look
         activeKids.forEach((k, i) => {
             const ca = sa + i*step;
-            const r = (i%3===0)? LR_base*1.4 : (i%3===1)? LR_base*1.1 : LR_base*.85;
+            // Slightly alternate radius to pack them cleanly if many, or keep uniform if few
+            const r = n > 5 ? LR_base * (1.0 + (i%2!==0 ? 0.35 : 0)) : LR_base * 1.1; 
             const lp = pos(bp.x, bp.y, ca, r);
 
-            mkSVGLine(bp.x, bp.y, lp.x, lp.y, br.color, 'tube');
-            mkSVGLine(bp.x, bp.y, lp.x, lp.y, br.color, 'tube-glow');
-            tubeSegments.push({x1:bp.x,y1:bp.y,x2:lp.x,y2:lp.y,color:br.color,colorRGB:br.colorRGB});
+            if (doAnim) {
+                mkSVGLine(bp.x, bp.y, lp.x, lp.y, br.color, 'tube');
+                mkSVGLine(bp.x, bp.y, lp.x, lp.y, br.color, 'tube-glow');
+                tubeSegments.push({x1:bp.x,y1:bp.y,x2:lp.x,y2:lp.y,color:br.color,colorRGB:br.colorRGB});
+            }
 
             const leaf = document.createElement('div');
             leaf.className = 'leaf ' + br.css;
             leaf.style.left = lp.x + 'px';
             leaf.style.top = lp.y + 'px';
-            leaf.style.animation = `leafEnter .5s ease ${leafDelay*.04}s forwards`;
+            leaf.style.animation = `nodeEnter .5s ease ${leafDelay*.04}s forwards`;
             leaf.innerHTML = `<div class="leaf-orb"><img src="${k.img}" loading="lazy"></div>`;
 
             leaf.addEventListener('mouseenter', e => {
