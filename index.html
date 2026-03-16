@@ -272,7 +272,7 @@
             <div class="toggle-row" style="margin-bottom: 12px;">
                 Partículas de Energía
                 <label class="switch">
-                    <input type="checkbox" id="animToggle" checked>
+                    <input type="checkbox" id="animToggle">
                     <span class="slider"></span>
                 </label>
             </div>
@@ -389,7 +389,7 @@ const branches = [
 // Initialize active state
 branches.forEach(b => b.kids.forEach((k,i) => { k.active = k.def; k.uid = b.id+'-'+i; }));
 
-let doAnim = true;
+let doAnim = false;
 let doLines = true;
 
 // ════════════════════════════════════════════════════
@@ -604,9 +604,9 @@ function drawEnergy(time){
         const lx=s.x1+(s.x2-s.x1)*p.t;
         const ly=s.y1+(s.y2-s.y1)*p.t;
         
-        // Transform logical coords to actual screen coords (camera pan/zoom)
-        const x = lx * sc + px;
-        const y = ly * sc + py;
+        // Transform logical coords to actual screen coords considering CSS transform-origin: center
+        const x = (lx - CX) * sc + CX + px;
+        const y = (ly - CY) * sc + CY + py;
 
         p.trail.push({x,y});
         if(p.trail.length>20) p.trail.shift();
@@ -626,7 +626,9 @@ function drawEnergy(time){
 
     const pulse = Math.sin(time*0.002)*0.3+0.7;
     const cw = 140 * sc; // core width
-    const grad = eX.createRadialGradient(CX*sc+px, CY*sc+py, 20*sc, CX*sc+px, CY*sc+py, cw*pulse);
+    const coreX = CX + px;
+    const coreY = CY + py;
+    const grad = eX.createRadialGradient(coreX, coreY, 20*sc, coreX, coreY, cw*pulse);
     grad.addColorStop(0,`rgba(0,180,255,${0.06*pulse})`);
     grad.addColorStop(1,'rgba(0,180,255,0)');
     eX.fillStyle=grad; 
@@ -654,11 +656,12 @@ requestAnimationFrame(loop);
 // ════════════════════════════════════════════════════
 //  ZOOM & PAN
 // ════════════════════════════════════════════════════
-let sc=1,px=0,py=0,pan=false,sx,sy;
+let sc=0.82,px=0,py=0,pan=false,sx,sy;
 const upd=()=>world.style.transform=`translate(${px}px,${py}px) scale(${sc})`;
+upd(); // Trigger initial transform to fit
 document.getElementById('zi').onclick=()=>{sc=Math.min(3,sc+.2);upd()};
 document.getElementById('zo').onclick=()=>{sc=Math.max(.3,sc-.2);upd()};
-document.getElementById('rv').onclick=()=>{sc=1;px=0;py=0;upd()};
+document.getElementById('rv').onclick=()=>{sc=0.82;px=0;py=0;upd()};
 const dg=document.getElementById('diagram');
 dg.onmousedown=e=>{
     if(e.button !== 0 || e.target.closest('.panel') || e.target.closest('.panel-toggle')) return;
@@ -679,7 +682,7 @@ dg.addEventListener('wheel',e=>{
 document.getElementById('btnExport').addEventListener('click', async () => {
     // Save current zoom state and reset it temporarily for capture
     const oldSc = sc, oldPx = px, oldPy = py;
-    sc = 1; px = 0; py = 0; upd();
+    sc = 0.82; px = 0; py = 0; upd();
     
     // Prepare DOM for transparent export
     document.body.classList.add('export-mode');
